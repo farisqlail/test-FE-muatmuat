@@ -1,114 +1,274 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
+"use client"
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+import React, { use, useEffect, useState } from "react";
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import { Modal, ModalContent, ModalHeader, ModalBody, ModalFooter, useDisclosure, Input } from "@heroui/react";
+
+import { getResource } from "@/utils/Fetch";
+
+import ProductCard from "@/components/ProductCard";
+import ButtonCreate from "@/components/ButtonCreate";
+import Navbar from "@/components/Navbar";
+
+export const IconPlus = () => {
+  return (
+    <svg width="18px" height="18px" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <g id="SVGRepo_bgCarrier" stroke-width="0" />
+      <g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round" />
+      <g id="SVGRepo_iconCarrier"> <path d="M4 12H20M12 4V20" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" /> </g>
+    </svg>
+  );
+};
 
 export default function Home() {
-  return (
-    <div
-      className={`${geistSans.variable} ${geistMono.variable} grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]`}
-    >
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              pages/index.js
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+  const [name, setName] = useState("");
+  const [stock, setStock] = useState("");
+  const [price, setPrice] = useState("");
+  const [dataStock, setDataStock] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filteredData, setFilteredData] = useState([]);
+  const [indexStock, setIndexStock] = useState(0);
+  const [selectedItems, setSelectedItems] = useState([]);
+  const { isOpen: isOpenAdd, onOpen: onOpenAdd, onOpenChange: onOpenChangeAdd, onClose: onCloseAdd } = useDisclosure();
+  const { isOpen: isOpenEdit, onOpen: onOpenEdit, onOpenChange: onOpenChangeEdit, onClose: onCloseEdit } = useDisclosure();
+  const { isOpen: isOpenDelete, onOpen: onOpenDelete, onOpenChange: onOpenChangeDelete, onClose: onCloseDelete } = useDisclosure();
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  useEffect(() => {
+    const dataStock = typeof window !== "undefined" ? JSON.parse(localStorage.getItem('stock')) : false;
+    setFilteredData(dataStock)
+    setDataStock(dataStock)
+  }, [dataStock]);
+
+  const resetForm = () => {
+    setName("")
+    setStock("")
+    setPrice("")
+  }
+
+  const handleSearchChange = (event) => {
+    const query = event.target.value.toLowerCase();
+    setSearchQuery(query);
+
+    const filtered = dataStock.filter((item) =>
+      item.name.toLowerCase().includes(query)
+    );
+
+    setFilteredData(filtered);
+  };
+
+  const createStock = () => {
+    if (name == "" || stock == "" || price == "") {
+      alert('Ada inputan yang kosong');
+    } else {
+      const data = {
+        name: name,
+        stock: stock,
+        price: price
+      }
+
+      const dataStock =
+        typeof window !== "undefined" ? JSON.parse(localStorage.getItem("stock")) || [] : false;
+      dataStock.push(data);
+      typeof window !== "undefined" ? localStorage.setItem("stock", JSON.stringify(dataStock)) : false;
+
+      resetForm();
+      onCloseAdd();
+      alert('Data berhasil ditambahkan')
+    }
+  }
+
+  const openEditStock = (item, index) => {
+    onOpenEdit();
+    setName(item.name);
+    setStock(item.stock);
+    setPrice(item.price);
+    setIndexStock(index);
+  }
+
+  const openDeleteStock = (item, index) => {
+    onOpenDelete();
+    setName(item.name);
+    setStock(item.stock);
+    setPrice(item.price);
+    setIndexStock(index);
+  }
+
+  const edit = (indexStock) => {
+    const dataEdit = {
+      name: name,
+      stock: stock,
+      price: price
+    };
+
+    const dataToUpdate = dataStock;
+    const index = dataToUpdate.findIndex((_, index) => index === indexStock);
+    dataToUpdate[index] = dataEdit;
+    typeof window !== "undefined" ? localStorage.setItem("stock", JSON.stringify(dataToUpdate)) : false;
+
+    resetForm();
+    onCloseEdit();
+    alert('data berhasil diubah')
+  }
+
+  const deleteData = (indexStock) => {
+    const dataToDelete = dataStock;
+    const index = dataToDelete.findIndex((_, index) => index === indexStock);
+    dataToDelete.splice(index, 1);
+    localStorage.setItem("stock", JSON.stringify(dataToDelete));
+    onCloseDelete();
+  }
+
+  return (
+    <div className="h-full w-full lg:p-0 p-4">
+      <Navbar />
+      <div className="flex flex-col items-center gap-6 h-full mt-4">
+        <div className="flex justify-between pb-4 lg:w-[400px] w-full">
+          <h1 className="text-2xl text-white">Manajemen Stock</h1>
+          <ButtonCreate icon={IconPlus()} onOpenAdd={onOpenAdd} />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+
+        <div className="lg:w-[400px] w-full">
+          <Input placeholder="Search ..." type="text" variant="bordered" value={searchQuery}
+            onChange={handleSearchChange} />
+        </div>
+
+        <ProductCard data={filteredData} openEditStock={openEditStock} openDeleteStock={openDeleteStock} />
+      </div>
+
+      <Modal isOpen={isOpenAdd} onOpenChange={onOpenChangeAdd}>
+        <ModalContent>
+          {(onCloseAdd) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1 text-black">Tambah Stock</ModalHeader>
+              <ModalBody>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="" className="text-black">Nama Barang</label>
+                  <Input
+                    type="text"
+                    variant="bordered"
+                    className="text-black"
+                    placeholder="Sate Ayam"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="" className="text-black">Stock</label>
+                  <Input
+                    type="number"
+                    variant="bordered"
+                    className="text-black"
+                    placeholder="10"
+                    value={stock}
+                    onChange={(e) => setStock(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="" className="text-black">Harga</label>
+                  <Input
+                    type="number"
+                    variant="bordered"
+                    className="text-black"
+                    placeholder="20000"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                  />
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <div className="flex gap-2 w-full">
+                  <button className="border border-black rounded-lg p-3 text-black w-full" onClick={onCloseAdd}>
+                    Batal
+                  </button>
+                  <button
+                    className="bg-green-500 rounded-lg p-3 w-full"
+                    onClick={createStock}
+                  >
+                    Tambah
+                  </button>
+                </div>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isOpenEdit} onOpenChange={onOpenChangeEdit}>
+        <ModalContent>
+          {(onCloseEdit) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1 text-black">Ubah Stock</ModalHeader>
+              <ModalBody>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="" className="text-black">Nama Barang</label>
+                  <Input
+                    type="text"
+                    variant="bordered"
+                    className="text-black"
+                    placeholder="Sate Ayam"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="" className="text-black">Stock</label>
+                  <Input
+                    type="number"
+                    variant="bordered"
+                    className="text-black"
+                    placeholder="10"
+                    value={stock}
+                    onChange={(e) => setStock(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label htmlFor="" className="text-black">Harga</label>
+                  <Input
+                    type="number"
+                    variant="bordered"
+                    className="text-black"
+                    placeholder="20000"
+                    value={price}
+                    onChange={(e) => setPrice(e.target.value)}
+                  />
+                </div>
+              </ModalBody>
+              <ModalFooter>
+                <div className="flex gap-2 w-full">
+                  <button className="border border-black rounded-lg p-3 text-black w-full" onClick={onCloseEdit}>
+                    Batal
+                  </button>
+                  <button
+                    className="bg-green-500 rounded-lg p-3 w-full"
+                    onClick={() => edit(indexStock)}
+                  >
+                    Ubah
+                  </button>
+                </div>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
+
+      <Modal isOpen={isOpenDelete} onOpenChange={onOpenChangeDelete}>
+        <ModalContent>
+          {(onCloseDelete) => (
+            <>
+              <ModalHeader className="flex flex-col gap-1 text-black">Hapus Stock</ModalHeader>
+              <ModalBody>
+                <span className="text-black">Apakah anda yakin ingin menghapus stock ini ? </span>
+              </ModalBody>
+              <ModalFooter>
+                <div className="flex gap-2 w-full">
+                  <button className="border border-black rounded-lg p-3 text-black w-full" onClick={onCloseDelete}>Batal</button>
+                  <button className="bg-red-500 rounded-lg p-3 w-full" onClick={() => deleteData(indexStock)}>Ya, hapus</button>
+                </div>
+              </ModalFooter>
+            </>
+          )}
+        </ModalContent>
+      </Modal>
     </div>
   );
 }
